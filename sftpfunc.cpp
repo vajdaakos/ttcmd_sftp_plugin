@@ -45,8 +45,6 @@
 #define myint int
 #define myuint UINT
 #endif
-const char* username = "SYSTEM";
-const char* password = "SYSTEM";
 unsigned long hostaddr;
 extern tProgressProc ProgressProc;
 extern tRequestProc RequestProc;
