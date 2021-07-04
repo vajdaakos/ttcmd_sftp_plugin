@@ -3722,8 +3722,9 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 			do {
 				
 				
-				attr.flags =LIBSSH2_SFTP_ATTR_SIZE;
+				attr.flags =LIBSSH2_SFTP_ATTR_SIZE | LIBSSH2_SFTP_ATTR_PERMISSIONS;
 				attr.filesize = filesize;
+				attr.permissions = 0644;
 				remotefilesftp=libssh2_sftp_open_ex_r(ConnectSettings->sftpsession,thename, strlen(thename), 
 					Resume ? LIBSSH2_FXF_WRITE :
 					LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC,
