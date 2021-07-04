@@ -63,7 +63,7 @@ BOOL MessageLoop(void* serverid)
 {
 	BOOL aborted=false;
 	pConnectSettings ConnectSettings=(pConnectSettings)serverid;
-	if (ConnectSettings && ProgressProc && abs(GetCurrentTime()-ConnectSettings->lastpercenttime)>250) {
+	if (ConnectSettings && ProgressProc && (GetCurrentTime()-ConnectSettings->lastpercenttime)>250) {
         // important: also call AFTER soft_aborted is true!!!
         aborted=0!=ProgressProc(PluginNumber,NULL,NULL,ConnectSettings->lastpercent);
         // allow abort with Escape when there is no progress dialog!
