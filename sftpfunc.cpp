@@ -45,7 +45,6 @@
 #define myint int
 #define myuint UINT
 #endif
-unsigned long hostaddr;
 extern tProgressProc ProgressProc;
 extern tRequestProc RequestProc;
 extern tLogProc LogProc;
