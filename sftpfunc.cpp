@@ -230,32 +230,7 @@ BOOL LoadSSHLib()
 		char ws2libname[MAX_PATH];
 		WSADATA wsadata;
 		WSAStartup(MAKEWORD( 2, 2 ), &wsadata); 
-		/*
-		// also load the getaddrinfo function
-        if (GetSystemDirectoryA(ws2libname, MAX_PATH)) {
-	        strlcat(ws2libname, "\\ws2_32",sizeof(ws2libname)-1);
-			HINSTANCE ws2lib = LoadLibraryA(ws2libname);
-			if (ws2lib) {
-	            getaddrinfo = (tgetaddrinfo)GetProcAddress(ws2lib, "getaddrinfo");
-		        freeaddrinfo = (tfreeaddrinfo)GetProcAddress(ws2lib, "freeaddrinfo");
-				WSAAddressToString=(tWSAAddressToStringA)GetProcAddress(ws2lib, "WSAAddressToStringA");
-				if (!getaddrinfo) {
-				    FreeLibrary(ws2lib);
-					GetSystemDirectoryA(ws2libname, MAX_PATH);
-					strlcat(ws2libname, "\\wship6",sizeof(ws2libname)-1);
-					ws2lib = LoadLibraryA(ws2libname);
-					if (ws2lib) {
-						getaddrinfo = (tgetaddrinfo)GetProcAddress(ws2lib, "getaddrinfo");
-						freeaddrinfo = (tfreeaddrinfo)GetProcAddress(ws2lib, "freeaddrinfo");
-						if (!getaddrinfo) {
-							FreeLibrary(ws2lib);
-						}
-					}
-				}
-			}
-        }
-		*/
-
+		
 	return loadOK;
 }
 
@@ -3754,7 +3729,7 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 					LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC,
 					LIBSSH2_SFTP_S_IRUSR | LIBSSH2_SFTP_S_IWUSR | LIBSSH2_SFTP_S_IRGRP | LIBSSH2_SFTP_S_IROTH,
 					LIBSSH2_SFTP_OPENFILE, &attr);     // ConnectSettings->filemod is ignored!!!
-				//MessageBox(GetActiveWindow(), "3", "Filesize", MB_ICONSTOP);
+				
 				if (EscapePressed()) {
 					ConnectSettings->neednewchannel=true;
 					break;
@@ -3763,12 +3738,12 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 					IsSocketReadable(ConnectSettings->sock);  // sleep to avoid 100% CPU!
 			} while (remotefilesftp==0 && libssh2_session_last_errno(ConnectSettings->session)==LIBSSH2_ERROR_EAGAIN);
 			memset(&attr, 0, sizeof(attr));
-			//MessageBox(GetActiveWindow(), "4", "Filesize", MB_ICONSTOP);
+			
 		}
 		if (remotefilescp || remotefilesftp) {
 			if (Resume) {   // seek!
 				DWORD resumepos=0;
-				//LIBSSH2_SFTP_ATTRIBUTES attr;
+				LIBSSH2_SFTP_ATTRIBUTES attr;
 				memset(&attr,0,sizeof(attr));
 				attr.flags=LIBSSH2_SFTP_ATTR_PERMISSIONS;
 				do {
