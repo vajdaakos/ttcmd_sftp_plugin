@@ -1,3 +1,4 @@
+#define DOTDIR
 #include <windows.h>
 #include <libssh2_config.h>
 #include <libssh2.h>
@@ -2891,6 +2892,7 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		} 
 	}
 	if (rc>0) {
+		#ifdef DOTDIR
 		char completeline_end[5];
 		memcpy(&completeline_end, &(name[strnlen_s(name, sizeof(name) - 1) - 4]), 4);
 		completeline_end[4] = '\0';
@@ -2898,6 +2900,7 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		{
 			name[strnlen_s(name, sizeof(name) - 1) - 4] = '\0';
 		}
+		#endif // DOTDIR
 		if (ConnectSettings->detailedlog)
 			ShowStatus(completeline);
 
@@ -2915,7 +2918,7 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		} else {
 			awlcopyCP(ConnectSettings->codepage,FindData->cFileName,name,countof(FindData->cFileName)-1);
 		}
-		
+		#ifdef DOTDIR
 		memcpy(&completeline_end, &(completeline[strnlen_s(completeline, sizeof(completeline) - 1) - 4]), 4);
 		completeline_end[4] = '\0';
 		if ((completeline[0] != 'd') && (strcmp(".DIR\0", completeline_end) == 0))
@@ -2923,7 +2926,9 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 			FindData->dwFileAttributes = FILE_ATTRIBUTE_DIRECTORY;
 			
 		}
-		 else if (file.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
+		else 
+		#endif //DOTDIR
+		if (file.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
 			if ((file.permissions&S_IFMT)==S_IFDIR ||
 				(attr & FILE_ATTRIBUTE_DIRECTORY)!=0)
 				FindData->dwFileAttributes=FILE_ATTRIBUTE_DIRECTORY;
