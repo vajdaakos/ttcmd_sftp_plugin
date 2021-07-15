@@ -1,4 +1,31 @@
+#define DOTDIR
 #include <windows.h>
+#include <libssh2_config.h>
+#include <libssh2.h>
+#include <libssh2_sftp.h>
+#include <string>
+#ifdef HAVE_WINSOCK2_H
+#ifndef _WINSOCKAPI_
+# include <winsock2.h>
+#endif
+#endif
+
+
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
 #include <stdio.h>
 #include <fcntl.h>
 #include "sftpfunc.h"
@@ -12,7 +39,6 @@
 #include "ftpdir.h"
 
 #include <map>
-
 #ifdef WIN64
 #define myint INT_PTR
 #define myuint UINT_PTR
@@ -20,7 +46,6 @@
 #define myint int
 #define myuint UINT
 #endif
-
 extern tProgressProc ProgressProc;
 extern tRequestProc RequestProc;
 extern tLogProc LogProc;
@@ -171,17 +196,9 @@ FARPROC GetProcAddressAgent(HMODULE hModule,LPCSTR lpProcName)
 //    char *comment;                 /* comment in printable format */
 //};
 
-#undef FUNCDEF
-#define FUNCDEF(r,f,p) typedef r (*t##f) p;
-#undef FUNCDEF2
-#define FUNCDEF2(r,f,p) typedef r (*t##f) p;
-#include "sshdynfunctions.h"
 
-#undef FUNCDEF
-#define FUNCDEF(r,f,p) t##f f=NULL;
-#undef FUNCDEF2
-#define FUNCDEF2(r,f,p) t##f f=NULL;
-#include "sshdynfunctions.h"
+
+
 
 // we need version 1.7.0 or later for SCP 64 bit SCP filetransfer
 #define LIBSSH2_VERSION_NUM_64BIT_FILETRANSFER_SCP 0x010206
@@ -194,213 +211,26 @@ FARPROC GetProcAddressAgent(HMODULE hModule,LPCSTR lpProcName)
 
 BOOL LoadSSHLib()
 {
-	if(!sshlib) {
-		LogProc(PluginNumber,MSGTYPE_DETAILS,"Loading SSH Library");
+	
 		int olderrormode=SetErrorMode(0x8001);
-		char dllname[MAX_PATH];
-		dllname[0]=0;
-
-		// first, try in the DLL directory (changed from previous versions)
-		GetModuleFileName(hinst,dllname,sizeof(dllname)-10);
-		char* p=strrchr(dllname,'\\');
-		if (p)
-			p++;
-		else
-			p=dllname;
-		// Load libeay32.dll first, otherwise it will not be found!
-#ifdef WIN64
-		p[0]=0;
-		strlcat(dllname,"64\\zlibwapi.dll",sizeof(dllname)-1);
-		sshlib=(HINSTANCE)LoadLibrary(dllname);
-		p[0]=0;
-		strlcat(dllname,"64\\zlib1.dll",sizeof(dllname)-1);
-		sshlib=(HINSTANCE)LoadLibrary(dllname);
-		p[0]=0;
-		strlcat(dllname,"64\\libeay32.dll",sizeof(dllname)-1);
-		sshlib=(HINSTANCE)LoadLibrary(dllname);
-		p[0]=0;
-		strlcat(dllname,"64\\libssh2.dll",sizeof(dllname)-1);
-		sshlib=(HINSTANCE)LoadLibrary(dllname);
-		if (!sshlib) {
-			p[0]=0;
-			strlcat(dllname,"x64\\zlibwapi.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"x64\\zlib1.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"x64\\libeay32.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"x64\\libssh2.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-		}
-#else 
-		sshlib=NULL;
-#endif
-		if (!sshlib) {
-			p[0]=0;
-			strlcat(dllname,"zlibwapi.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"zlib1.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"libeay32.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"libssh2.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-		}
-		if (!sshlib) {
-			GetModuleFileName(NULL,dllname,sizeof(dllname)-10);
-			p=strrchr(dllname,'\\');
-			if (p)
-				p++;
-			else
-				p=dllname;
-			// Load libeay32.dll first, otherwise it will not be found!
-			p[0]=0;
-#ifdef WIN64
-			strlcat(dllname,"64\\zlibwapi.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"64\\zlib1.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"64\\libeay32.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			p[0]=0;
-			strlcat(dllname,"64\\libssh2.dll",sizeof(dllname)-1);
-			sshlib=(HINSTANCE)LoadLibrary(dllname);
-			if (!sshlib) {
-				p[0]=0;
-				strlcat(dllname,"x64\\zlibwapi.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"x64\\zlib1.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"x64\\libeay32.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"x64\\libssh2.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-			}
-#endif
-			if (!sshlib) {
-				p[0]=0;
-				strlcat(dllname,"zlibwapi.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"zlib1.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"libeay32.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-				p[0]=0;
-				strlcat(dllname,"libssh2.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibrary(dllname);
-			}
-		}
-		if (!sshlib) {
-			// try also in Total Commander dir and the path!
-			// we don't need to load libeay32.dll then, because
-			// libssh2.dll would find it in the path anyway!
-			sshlib=(HINSTANCE)LoadLibrary("libssh2.dll");
-		}
-		if (!sshlib) {
-			OSVERSIONINFO vx;
-			vx.dwOSVersionInfoSize=sizeof(vx);
-			GetVersionEx(&vx);
-			if (vx.dwPlatformId==VER_PLATFORM_WIN32_NT && vx.dwMajorVersion<6) {  // XP or older?
-				GetModuleFileName(hinst,dllname,sizeof(dllname)-10);
-				char* p=strrchr(dllname,'\\');
-				if (p)
-					p++;
-				else
-					p=dllname;
-#ifdef WIN64
-				p[0]=0;
-				strlcat(dllname,"64\\libssh2.dll",sizeof(dllname)-1);
-				sshlib=(HINSTANCE)LoadLibraryEx(dllname,NULL,LOAD_LIBRARY_AS_DATAFILE);
-				if (!sshlib) {
-					p[0]=0;
-					strlcat(dllname,"x64\\libssh2.dll",sizeof(dllname)-1);
-					sshlib=(HINSTANCE)LoadLibraryEx(dllname,NULL,LOAD_LIBRARY_AS_DATAFILE);
-				}
-#endif
-				if (!sshlib) {
-					p[0]=0;
-					strlcat(dllname,"libssh2.dll",sizeof(dllname)-1);
-					sshlib=(HINSTANCE)LoadLibraryEx(dllname,NULL,LOAD_LIBRARY_AS_DATAFILE);
-				}
-				if (sshlib) {
-					HICON icon=LoadIcon(sshlib,MAKEINTRESOURCE(12345));
-					FreeLibrary(sshlib);
-					sshlib=NULL;
-					if (icon) {
-						MessageBox(GetActiveWindow(), "This plugin requires Windows Vista, 7 or newer. Please get the separate plugin for Windows XP or older from www.ghisler.com!","Error",MB_ICONSTOP);
-						return false;
-					}
-				}
-			}
-#ifdef WIN64
-			int res=MessageBox(GetActiveWindow(), "Please put the openssl dlls either\n- in the same directory as the plugin, or\n- in the Total Commander dir, or\n- in subdir \"64\" of the plugin or TC directory, or\n- somewhere in your PATH!\n\nDownload now?","Error",MB_YESNO | MB_ICONSTOP);
-#else
-			int res=MessageBox(GetActiveWindow(), "Please put the openssl dlls either\n- in the same directory as the plugin, or\n- in the Total Commander dir, or\n- somewhere in your PATH!\n\nDownload now?","Error",MB_YESNO | MB_ICONQUESTION);
-#endif
-			if (res==IDYES)
-				ShellExecute(GetActiveWindow(),NULL,"https://www.ghisler.com/openssl",NULL,NULL,SW_SHOW);
-			return false;
-		}
+		
 		SetErrorMode(olderrormode);
 		loadOK=true;
 		loadAgent=true;
 		
-		// the following will load all the functions!
-		#undef FUNCDEF
-		#undef FUNCDEF2
-		#define FUNCDEF(r,f,p) f=(t##f)GetProcAddress2(sshlib, #f)
-		#define FUNCDEF2(r,f,p) f=(t##f)GetProcAddressAgent(sshlib, #f)
-		#include "sshdynfunctions.h"
+		
 
 		SSH_ScpNo2GBLimit=(libssh2_version!=NULL && libssh2_version(LIBSSH2_VERSION_NUM_64BIT_FILETRANSFER_SCP)!=NULL);
 		SSH_ScpCanSendKeepAlive=(libssh2_version!=NULL && libssh2_version(LIBSSH2_VERSION_NUM_CAN_SEND_KEEP_ALIVE_SCP)!=NULL);
 		SSH_ScpNeedBlockingMode=(libssh2_version==NULL || !libssh2_version(LIBSSH2_VERSION_NUM_ASYNC_SCP));
 		SSH_ScpNeedQuote=(libssh2_version==NULL || !libssh2_version(LIBSSH2_VERSION_NUM_QUOTE_SCP));
-	}
+	
 	// initialize the Winsock calls too
-	if (loadOK) {
+	
 		char ws2libname[MAX_PATH];
 		WSADATA wsadata;
 		WSAStartup(MAKEWORD( 2, 2 ), &wsadata); 
-
-		// also load the getaddrinfo function
-        if (GetSystemDirectoryA(ws2libname, MAX_PATH)) {
-	        strlcat(ws2libname, "\\ws2_32",sizeof(ws2libname)-1);
-			HINSTANCE ws2lib = LoadLibraryA(ws2libname);
-			if (ws2lib) {
-	            getaddrinfo = (tgetaddrinfo)GetProcAddress(ws2lib, "getaddrinfo");
-		        freeaddrinfo = (tfreeaddrinfo)GetProcAddress(ws2lib, "freeaddrinfo");
-				WSAAddressToString=(tWSAAddressToStringA)GetProcAddress(ws2lib, "WSAAddressToStringA");
-				if (!getaddrinfo) {
-				    FreeLibrary(ws2lib);
-					GetSystemDirectoryA(ws2libname, MAX_PATH);
-					strlcat(ws2libname, "\\wship6",sizeof(ws2libname)-1);
-					ws2lib = LoadLibraryA(ws2libname);
-					if (ws2lib) {
-						getaddrinfo = (tgetaddrinfo)GetProcAddress(ws2lib, "getaddrinfo");
-						freeaddrinfo = (tfreeaddrinfo)GetProcAddress(ws2lib, "freeaddrinfo");
-						if (!getaddrinfo) {
-							FreeLibrary(ws2lib);
-						}
-					}
-				}
-			}
-        }
-	}
-
+		
 	return loadOK;
 }
 
@@ -1114,12 +944,15 @@ int SftpConnect(pConnectSettings ConnectSettings)
 		 * and setup crypto, compression, and MAC layers
 		 */
 		LoadStr(buf,IDS_SESSION_STARTUP);
-		while ((auth = libssh2_session_startup(ConnectSettings->session, (int)ConnectSettings->sock)) == LIBSSH2_ERROR_EAGAIN) {
+		
+		while ((auth = libssh2_session_handshake(ConnectSettings->session, ConnectSettings->sock)) == LIBSSH2_ERROR_EAGAIN) {
 			if (ProgressLoop(buf,40,60,&loop,&lasttime))
 				break;
 			IsSocketReadable(ConnectSettings->sock);  // sleep to avoid 100% CPU!
 		} 
-
+		
+		
+		
 		if(auth) {
 			LoadStr(buf,IDS_ERR_SSH_SESSION);
 			char* errmsg;
@@ -1277,7 +1110,7 @@ int SftpConnect(pConnectSettings ConnectSettings)
 					ShellExecute(active,NULL,linkname,NULL,dirname,SW_SHOW);
 					Sleep(2000);
 					DWORD starttime=GetCurrentTime();
-					while (active!=GetForegroundWindow() && abs(GetCurrentTime()-starttime)<20000) {
+					while (active!=GetForegroundWindow() && (GetCurrentTime()-starttime)<20000) {
 						Sleep(200);
 						if (ProgressLoop(buf,65,70,&loop,&lasttime))
 							break;
@@ -3059,6 +2892,15 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		} 
 	}
 	if (rc>0) {
+		#ifdef DOTDIR
+		char completeline_end[5];
+		memcpy(&completeline_end, &(name[strnlen_s(name, sizeof(name) - 1) - 4]), 4);
+		completeline_end[4] = '\0';
+		if ((completeline[0] != 'd') && (strcmp(".DIR\0", completeline_end) == 0))
+		{
+			name[strnlen_s(name, sizeof(name) - 1) - 4] = '\0';
+		}
+		#endif // DOTDIR
 		if (ConnectSettings->detailedlog)
 			ShowStatus(completeline);
 
@@ -3076,12 +2918,24 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		} else {
 			awlcopyCP(ConnectSettings->codepage,FindData->cFileName,name,countof(FindData->cFileName)-1);
 		}
+		#ifdef DOTDIR
+		memcpy(&completeline_end, &(completeline[strnlen_s(completeline, sizeof(completeline) - 1) - 4]), 4);
+		completeline_end[4] = '\0';
+		if ((completeline[0] != 'd') && (strcmp(".DIR\0", completeline_end) == 0))
+		{
+			FindData->dwFileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+			
+		}
+		else 
+		#endif //DOTDIR
 		if (file.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
 			if ((file.permissions&S_IFMT)==S_IFDIR ||
 				(attr & FILE_ATTRIBUTE_DIRECTORY)!=0)
 				FindData->dwFileAttributes=FILE_ATTRIBUTE_DIRECTORY;
+			    
 		} else if (completeline[0]=='d')
 			FindData->dwFileAttributes=FILE_ATTRIBUTE_DIRECTORY;
+		
 
 		FindData->cAlternateFileName[0]=0;
 		FindData->ftCreationTime.dwHighDateTime=0;
@@ -3754,6 +3608,7 @@ DWORD GetTextUploadResumePos(HANDLE localfile,DWORD resumepos)
 int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resume,BOOL setattr)
 {
 	LIBSSH2_SFTP_HANDLE *remotefilesftp=NULL;
+	LIBSSH2_SFTP_ATTRIBUTES attr;
 	LIBSSH2_CHANNEL *remotefilescp=NULL;
 	HANDLE localfile;
 	char data[SEND_BLOCK_SIZE];   // 32k does NOT work!
@@ -3834,7 +3689,6 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 		wcslcat(msgbuf,RemoteName,countof(msgbuf)-1);
 		ReplaceBackslashBySlashW(msgbuf);
 		ShowStatusW(msgbuf);
-
 		if (scpdata) {
 			char thename2[wdirtypemax];
 			if (SSH_ScpNeedQuote && strchr(thename,' ')!=0) {
@@ -3870,8 +3724,17 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 			if (TextMode && -1==GetTextModeFileSize(localfile,false))
 				TextMode=false;
 			do {
-				remotefilesftp=libssh2_sftp_open(ConnectSettings->sftpsession,thename,Resume ? LIBSSH2_FXF_WRITE : LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC,
-					0644);     // ConnectSettings->filemod is ignored!!!
+				
+				
+				attr.flags =LIBSSH2_SFTP_ATTR_SIZE | LIBSSH2_SFTP_ATTR_PERMISSIONS;
+				attr.filesize = filesize;
+				attr.permissions = 0644;
+				remotefilesftp=libssh2_sftp_open_ex_r(ConnectSettings->sftpsession,thename, strlen(thename), 
+					Resume ? LIBSSH2_FXF_WRITE :
+					LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC,
+					LIBSSH2_SFTP_S_IRUSR | LIBSSH2_SFTP_S_IWUSR | LIBSSH2_SFTP_S_IRGRP | LIBSSH2_SFTP_S_IROTH,
+					LIBSSH2_SFTP_OPENFILE, &attr);     // ConnectSettings->filemod is ignored!!!
+				
 				if (EscapePressed()) {
 					ConnectSettings->neednewchannel=true;
 					break;
@@ -3879,6 +3742,8 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 				if (remotefilesftp==0)
 					IsSocketReadable(ConnectSettings->sock);  // sleep to avoid 100% CPU!
 			} while (remotefilesftp==0 && libssh2_session_last_errno(ConnectSettings->session)==LIBSSH2_ERROR_EAGAIN);
+			memset(&attr, 0, sizeof(attr));
+			
 		}
 		if (remotefilescp || remotefilesftp) {
 			if (Resume) {   // seek!
