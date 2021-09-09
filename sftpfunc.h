@@ -66,6 +66,7 @@ typedef struct {
 	int scpserver64bit;		// 0=no, 1=yes, -1, auto-detect -> Support file upload/download > 2GB only if SCP on server side is 64bit!
 							// There might be 32bit SCP implementations with large file support but we cannot detect it. 
 	BOOL scpserver64bittemporary;  // true=user allowed transfers>2GB
+	BOOL DMX;
 } tConnectSettings,*pConnectSettings;
 
 void* SftpConnectToServer(char* DisplayName,char* inifilename,char* overridepass);

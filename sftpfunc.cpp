@@ -2569,7 +2569,6 @@ void* SftpConnectToServer(char* DisplayName,char* inifilename,char* overridepass
 				
 				libssh2_keepalive_config(psettings->session, 0, psettings->keepAliveIntervalSeconds);
 			}
-
 			return psettings;
 		}
 	}
@@ -2691,12 +2690,12 @@ int SftpFindFirstFileW(void* serverid,WCHAR* remotedir,void** davdataptr)
 	else
 		walcopyCP(ConnectSettings->codepage,dirname,remotedir,sizeof(dirname)-1);
 	ReplaceBackslashBySlash(dirname);
+	
 	if (strlen(dirname)>1) {
 		char* p=dirname+strlen(dirname)-1;
 		if (p[0]!='/')            // ADD trailing slash!
 			strlcat(dirname,"/",sizeof(dirname)-1);
 	}
-
 	if (ConnectSettings->scponly) {
 		LIBSSH2_CHANNEL *channel;
 		channel=ConnectChannel(ConnectSettings->session);
@@ -2898,6 +2897,7 @@ BOOL SftpFindNextFileW(void* serverid,void* davdataptr,WIN32_FIND_DATAW *FindDat
 		completeline_end[4] = '\0';
 		if ((completeline[0] != 'd') && (strcmp(".DIR\0", completeline_end) == 0))
 		{
+			ConnectSettings->DMX = TRUE;
 			name[strnlen_s(name, sizeof(name) - 1) - 4] = '\0';
 		}
 		#endif // DOTDIR
@@ -3649,6 +3649,7 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 	localfile=CreateFileT(LocalName,GENERIC_READ,FILE_SHARE_READ | FILE_SHARE_WRITE,
 		NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,NULL);
 
+
 	if (localfile!=INVALID_HANDLE_VALUE) {
 		DWORD sizehigh;
 		__int64 sizesent=0;
@@ -3729,6 +3730,24 @@ int SftpUploadFileW(void* serverid,WCHAR* LocalName,WCHAR* RemoteName,BOOL Resum
 				attr.flags =LIBSSH2_SFTP_ATTR_SIZE | LIBSSH2_SFTP_ATTR_PERMISSIONS;
 				attr.filesize = filesize;
 				attr.permissions = 0644;
+				/*todo*/
+				if (ConnectSettings->DMX == TRUE)
+				{
+					
+					size_t thename_len = strlen(thename);
+					if (thename_len > 12)
+					{
+						MessageBox(GetActiveWindow(), "DMX supports maximum 8 letters long filenames! Filname will be truncated!", "Warning!!!", MB_ICONWARNING);
+					}
+
+					
+					
+					for (int i = 0; i < thename_len;++i)
+					{
+						thename[i] = std::toupper(thename[i]);
+					}
+					
+				}
 				remotefilesftp=libssh2_sftp_open_ex_r(ConnectSettings->sftpsession,thename, strlen(thename), 
 					Resume ? LIBSSH2_FXF_WRITE :
 					LIBSSH2_FXF_WRITE|LIBSSH2_FXF_CREAT|LIBSSH2_FXF_TRUNC,
@@ -4606,7 +4625,6 @@ int SftpQuoteCommand2(void* serverid,char* remotedir,char* cmd,char* reply,int r
 int SftpQuoteCommand2W(void* serverid,WCHAR* remotedir,WCHAR* cmd,char* reply,int replylen)
 {
 	LIBSSH2_CHANNEL *channel=NULL;
-
 	if (reply && replylen)
 		reply[0]=0;
 
